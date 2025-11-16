@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/user_hive.dart';
+import '../services/user_storage.dart';
 import 'home.dart';
 import 'register.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
-import '../services/user_hive.dart';
+import '../services/user_storage.dart';
 import 'home.dart';
 
 class RegisterPage extends StatefulWidget {
