@@ -42,7 +42,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         title: Text(
-          "ssss",
+          "Mes Contacts",
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
         ),
         actions: [
