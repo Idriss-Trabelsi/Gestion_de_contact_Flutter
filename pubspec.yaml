@@ -17,8 +17,12 @@ dependencies:
   hive_flutter: ^1.1.0
   path_provider: ^2.1.1
 
+  # URL Launcher pour WhatsApp
+  url_launcher: ^6.2.2
+
   # Autres dépendances
   cupertino_icons: ^1.0.2
+
 
 dev_dependencies:
   flutter_test:

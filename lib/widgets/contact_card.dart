@@ -93,7 +93,6 @@ class ContactCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
             blurRadius: 8,
             offset: Offset(0, 4),
           ),

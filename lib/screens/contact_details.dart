@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart'; // Ajoutez ceci
 import '../models/contact.dart';
 import '../services/contact_storage.dart';
 import 'create_edit_contact.dart';
@@ -21,6 +22,8 @@ class ContactDetailsPage extends StatelessWidget {
               children: [
                 SizedBox(height: 20),
                 _buildInfoSection(context),
+                SizedBox(height: 20),
+                _buildQuickActions(context), // Nouveau: Actions rapides
                 SizedBox(height: 20),
                 _buildActionButtons(context),
                 SizedBox(height: 40),
@@ -279,6 +282,155 @@ class ContactDetailsPage extends StatelessWidget {
             child: Text("Supprimer"),
           ),
         ],
+      ),
+    );
+  }
+
+  // NOUVEAU: Section des actions rapides (WhatsApp, Appel, SMS)
+  Widget _buildQuickActions(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: EdgeInsets.all(6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildQuickActionButton(
+                    icon: Icons.phone,
+                    label: "Appeler",
+                    color: Colors.green,
+                    onTap: () => _makePhoneCall(context),
+                  ),
+                  _buildQuickActionButton(
+                    icon: Icons.message,
+                    label: "SMS",
+                    color: Colors.blue,
+                    onTap: () => _sendSMS(context),
+                  ),
+                  _buildQuickActionButton(
+                    icon: Icons.chat,
+                    label: "WhatsApp",
+                    color: Color(0xFF25D366), // Couleur officielle WhatsApp
+                    onTap: () => _openWhatsApp(context),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Fonction pour ouvrir WhatsApp
+  Future<void> _openWhatsApp(BuildContext context) async {
+    // Nettoyer le numéro de téléphone (enlever espaces, tirets, etc.)
+    String phoneNumber = contact.phone.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    // Ajouter l'indicatif international si nécessaire
+    // Si le numéro commence par 0, remplacer par l'indicatif du pays
+    if (phoneNumber.startsWith('0')) {
+      phoneNumber = '+216${phoneNumber.substring(1)}';
+    } else if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+216$phoneNumber';
+    }
+
+    final whatsappUrl = Uri.parse('https://wa.me/$phoneNumber');
+
+    try {
+      if (await canLaunchUrl(whatsappUrl)) {
+        await launchUrl(
+          whatsappUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        _showError(context, 'WhatsApp n\'est pas installé sur cet appareil');
+      }
+    } catch (e) {
+      _showError(context, 'Impossible d\'ouvrir WhatsApp: $e');
+    }
+  }
+
+  // Fonction pour passer un appel téléphonique
+  Future<void> _makePhoneCall(BuildContext context) async {
+    final phoneUrl = Uri.parse('tel:${contact.phone}');
+
+    try {
+      if (await canLaunchUrl(phoneUrl)) {
+        await launchUrl(phoneUrl);
+      } else {
+        _showError(context, 'Impossible de passer l\'appel');
+      }
+    } catch (e) {
+      _showError(context, 'Erreur lors de l\'appel: $e');
+    }
+  }
+
+  // Fonction pour envoyer un SMS
+  Future<void> _sendSMS(BuildContext context) async {
+    final smsUrl = Uri.parse('sms:${contact.phone}');
+
+    try {
+      if (await canLaunchUrl(smsUrl)) {
+        await launchUrl(smsUrl);
+      } else {
+        _showError(context, 'Impossible d\'ouvrir les messages');
+      }
+    } catch (e) {
+      _showError(context, 'Erreur lors de l\'envoi du SMS: $e');
+    }
+  }
+
+  // Fonction pour afficher les erreurs
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
