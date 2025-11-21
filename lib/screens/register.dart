@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/user_storage.dart';
-import 'home.dart';
+
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -44,10 +44,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => HomePage()),
-    );
+    Navigator.pushReplacementNamed(context, '/');
   }
 
   @override

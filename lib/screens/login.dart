@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/user_storage.dart';
-import 'home.dart';
-import 'register.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -37,10 +35,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
     
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => HomePage()),
-    );
+    Navigator.pushReplacementNamed(context, '/');
   }
 
   @override
@@ -139,10 +134,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     SizedBox(height: 20),
                     TextButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => RegisterPage()),
-                      ),
+                      onPressed: () => Navigator.pushReplacementNamed(context, '/register'),
                       child: RichText(
                         text: TextSpan(
                           text: "Pas de compte ? ",

@@ -96,7 +96,7 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(fontSize: 16, color: Colors.grey[500]),
           ),
         ],
-      ),
+      ), 
     );
   }
 

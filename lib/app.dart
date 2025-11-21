@@ -72,7 +72,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       // Define named routes for easier navigation
-      initialRoute: '/',
+      initialRoute: '/login',
       routes: {
         '/login': (context) => LoginPage(),
         '/register': (context) => RegisterPage(),
