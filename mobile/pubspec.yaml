@@ -20,9 +20,14 @@ dependencies:
   # URL Launcher pour WhatsApp
   url_launcher: ^6.2.2
 
+  # HTTP pour appeler l'API
+  http: ^1.1.0
+
+  # State management
+  provider: ^6.1.1
+
   # Autres dépendances
   cupertino_icons: ^1.0.2
-
 
 dev_dependencies:
   flutter_test:

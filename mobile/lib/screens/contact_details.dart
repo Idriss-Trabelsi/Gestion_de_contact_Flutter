@@ -1,17 +1,23 @@
+// lib/screens/contact_details.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart'; // Ajoutez ceci
+import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import '../models/contact.dart';
-import '../services/contact_storage.dart';
+import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import 'create_edit_contact.dart';
 
 class ContactDetailsPage extends StatelessWidget {
   final Contact contact;
 
-  const ContactDetailsPage({required this.contact});
+  const ContactDetailsPage({Key? key, required this.contact}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+    final username = authService.currentUsername;
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: CustomScrollView(
@@ -23,9 +29,9 @@ class ContactDetailsPage extends StatelessWidget {
                 SizedBox(height: 20),
                 _buildInfoSection(context),
                 SizedBox(height: 20),
-                _buildQuickActions(context), // Nouveau: Actions rapides
+                _buildQuickActions(context),
                 SizedBox(height: 20),
-                _buildActionButtons(context),
+                _buildActionButtons(context, username),
                 SizedBox(height: 40),
               ],
             ),
@@ -196,7 +202,7 @@ class ContactDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, String? username) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -238,55 +244,6 @@ class ContactDetailsPage extends StatelessWidget {
     );
   }
 
-  void _copyToClipboard(BuildContext context, String text) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Copié dans le presse-papiers"),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  void _navigateToEdit(BuildContext context) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => CreateEditContactPage(contact: contact)),
-    );
-    Navigator.pop(context);
-  }
-
-  void _confirmDelete(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text("Confirmer la suppression"),
-        content: Text("Êtes-vous sûr de vouloir supprimer ce contact ?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text("Annuler"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await ContactHive.deleteContact(contact.id);
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Contact supprimé")),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text("Supprimer"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // NOUVEAU: Section des actions rapides (WhatsApp, Appel, SMS)
   Widget _buildQuickActions(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
@@ -316,7 +273,7 @@ class ContactDetailsPage extends StatelessWidget {
                   _buildQuickActionButton(
                     icon: Icons.chat,
                     label: "WhatsApp",
-                    color: Color(0xFF25D366), // Couleur officielle WhatsApp
+                    color: Color(0xFF25D366),
                     onTap: () => _openWhatsApp(context),
                   ),
                 ],
@@ -364,13 +321,104 @@ class ContactDetailsPage extends StatelessWidget {
     );
   }
 
-  // Fonction pour ouvrir WhatsApp
+  void _copyToClipboard(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Copié dans le presse-papiers"),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _navigateToEdit(BuildContext context) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final username = authService.currentUsername;
+    
+    if (username == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Vous devez être connecté"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateEditContactPage(
+          contact: contact,
+          username: username,
+        ),
+      ),
+    );
+    Navigator.pop(context);
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final username = authService.currentUsername;
+    
+    if (username == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Vous devez être connecté"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text("Confirmer la suppression"),
+        content: Text("Êtes-vous sûr de vouloir supprimer ce contact ?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text("Annuler"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await ApiService.deleteContact(
+                  username: username,
+                  contactId: contact.id,
+                );
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Contact supprimé avec succès"),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Erreur: ${e.toString()}"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text("Supprimer"),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openWhatsApp(BuildContext context) async {
-    // Nettoyer le numéro de téléphone (enlever espaces, tirets, etc.)
     String phoneNumber = contact.phone.replaceAll(RegExp(r'[^\d+]'), '');
     
-    // Ajouter l'indicatif international si nécessaire
-    // Si le numéro commence par 0, remplacer par l'indicatif du pays
     if (phoneNumber.startsWith('0')) {
       phoneNumber = '+216${phoneNumber.substring(1)}';
     } else if (!phoneNumber.startsWith('+')) {
@@ -386,14 +434,13 @@ class ContactDetailsPage extends StatelessWidget {
           mode: LaunchMode.externalApplication,
         );
       } else {
-        _showError(context, 'WhatsApp n\'est pas installé sur cet appareil');
+        _showError(context, 'WhatsApp n\'est pas installé');
       }
     } catch (e) {
       _showError(context, 'Impossible d\'ouvrir WhatsApp: $e');
     }
   }
 
-  // Fonction pour passer un appel téléphonique
   Future<void> _makePhoneCall(BuildContext context) async {
     final phoneUrl = Uri.parse('tel:${contact.phone}');
 
@@ -408,7 +455,6 @@ class ContactDetailsPage extends StatelessWidget {
     }
   }
 
-  // Fonction pour envoyer un SMS
   Future<void> _sendSMS(BuildContext context) async {
     final smsUrl = Uri.parse('sms:${contact.phone}');
 
@@ -423,7 +469,6 @@ class ContactDetailsPage extends StatelessWidget {
     }
   }
 
-  // Fonction pour afficher les erreurs
   void _showError(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

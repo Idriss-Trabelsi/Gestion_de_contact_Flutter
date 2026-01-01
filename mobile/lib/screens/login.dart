@@ -1,5 +1,8 @@
+// lib/screens/login.dart
 import 'package:flutter/material.dart';
-import '../services/user_storage.dart';
+import '../services/api_service.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -10,32 +13,45 @@ class _LoginPageState extends State<LoginPage> {
   final usernameCtrl = TextEditingController();
   final passwordCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool isLoading = false;
 
-  void login() {
+  Future<void> login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final ok = UserHive.login(usernameCtrl.text, passwordCtrl.text);
+    setState(() => isLoading = true);
 
-    if (!ok) {
+    try {
+      final response = await ApiService.loginUser(
+        username: usernameCtrl.text,
+        password: passwordCtrl.text,
+      );
+
+      // Mettre à jour l'état d'authentification
+      final authService = Provider.of<AuthService>(context, listen: false);
+      authService.setUser(response['user']);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Identifiants incorrects"),
+          content: Text(response['message'] ?? "Connexion réussie !"),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          backgroundColor: Colors.green,
         ),
       );
-      return;
+      
+      Navigator.pushReplacementNamed(context, '/');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => isLoading = false);
     }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Connexion réussie !"),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-    
-    Navigator.pushReplacementNamed(context, '/');
   }
 
   @override
@@ -116,22 +132,24 @@ class _LoginPageState extends State<LoginPage> {
                       validator: (val) => val!.isEmpty ? "Le mot de passe est requis" : null,
                     ),
                     SizedBox(height: 30),
-                    ElevatedButton(
-                      onPressed: login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[700],
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 4,
-                      ),
-                      child: Text(
-                        "Se connecter",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                    isLoading
+                        ? CircularProgressIndicator()
+                        : ElevatedButton(
+                            onPressed: login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue[700],
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 4,
+                            ),
+                            child: Text(
+                              "Se connecter",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
                     SizedBox(height: 20),
                     TextButton(
                       onPressed: () => Navigator.pushReplacementNamed(context, '/register'),

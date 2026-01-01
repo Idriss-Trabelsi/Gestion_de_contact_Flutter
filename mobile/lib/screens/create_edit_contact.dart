@@ -1,11 +1,17 @@
+// lib/screens/create_edit_contact.dart
 import 'package:flutter/material.dart';
 import '../models/contact.dart';
-import '../services/contact_storage.dart';
+import '../services/api_service.dart';
 
 class CreateEditContactPage extends StatefulWidget {
   final Contact? contact;
+  final String username;
 
-  const CreateEditContactPage({this.contact});
+  const CreateEditContactPage({
+    Key? key,
+    required this.username,
+    this.contact,
+  }) : super(key: key);
 
   @override
   _CreateEditContactPageState createState() => _CreateEditContactPageState();
@@ -17,6 +23,7 @@ class _CreateEditContactPageState extends State<CreateEditContactPage> {
   late TextEditingController phoneCtrl;
   late TextEditingController emailCtrl;
   late TextEditingController addressCtrl;
+  bool isLoading = false;
 
   bool get isEditing => widget.contact != null;
 
@@ -41,25 +48,50 @@ class _CreateEditContactPageState extends State<CreateEditContactPage> {
   Future<void> _saveContact() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final contact = Contact(
-      id: widget.contact?.id ?? DateTime.now().toString(),
-      name: nameCtrl.text.trim(),
-      phone: phoneCtrl.text.trim(),
-      email: emailCtrl.text.trim(),
-      address: addressCtrl.text.trim(),
-    );
+    setState(() => isLoading = true);
 
-    await ContactHive.saveContact(contact);
+    try {
+      if (isEditing) {
+        await ApiService.updateContact(
+          username: widget.username,
+          contactId: widget.contact!.id,
+          name: nameCtrl.text.trim(),
+          phone: phoneCtrl.text.trim(),
+          email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+          address: addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
+        );
+      } else {
+        await ApiService.createContact(
+          username: widget.username,
+          name: nameCtrl.text.trim(),
+          phone: phoneCtrl.text.trim(),
+          email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+          address: addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
+        );
+      }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(isEditing ? "Contact mis à jour" : "Contact créé"),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isEditing ? "Contact mis à jour" : "Contact créé"),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          backgroundColor: Colors.green,
+        ),
+      );
 
-    Navigator.pop(context);
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -118,22 +150,24 @@ class _CreateEditContactPageState extends State<CreateEditContactPage> {
               maxLines: 3,
             ),
             SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _saveContact,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[700],
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-              ),
-              child: Text(
-                isEditing ? "Enregistrer les modifications" : "Créer le contact",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
+            isLoading
+                ? Center(child: CircularProgressIndicator())
+                : ElevatedButton(
+                    onPressed: _saveContact,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[700],
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                    ),
+                    child: Text(
+                      isEditing ? "Enregistrer les modifications" : "Créer le contact",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
           ],
         ),
       ),

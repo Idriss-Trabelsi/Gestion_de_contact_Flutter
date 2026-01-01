@@ -1,7 +1,8 @@
+// lib/screens/register.dart
 import 'package:flutter/material.dart';
-import '../models/user.dart';
-import '../services/user_storage.dart';
-
+import '../services/api_service.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -13,38 +14,46 @@ class _RegisterPageState extends State<RegisterPage> {
   final passwordCtrl = TextEditingController();
   final emailCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool isLoading = false;
 
   Future<void> register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final user = User(
-      username: usernameCtrl.text,
-      password: passwordCtrl.text,
-      email: emailCtrl.text,
-    );
+    setState(() => isLoading = true);
 
-    if (UserHive.getUser(user.username) != null) {
+    try {
+      final response = await ApiService.registerUser(
+        username: usernameCtrl.text,
+        password: passwordCtrl.text,
+        email: emailCtrl.text,
+      );
+
+      // Mettre à jour l'état d'authentification
+      final authService = Provider.of<AuthService>(context, listen: false);
+      authService.setUser(response);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Utilisateur déjà existant"),
+          content: Text("Compte créé avec succès !"),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          backgroundColor: Colors.green,
         ),
       );
-      return;
+
+      Navigator.pushReplacementNamed(context, '/');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => isLoading = false);
     }
-
-    await UserHive.saveUser(user);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Compte créé avec succès !"),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-
-    Navigator.pushReplacementNamed(context, '/');
   }
 
   @override
@@ -137,22 +146,24 @@ class _RegisterPageState extends State<RegisterPage> {
                       validator: (val) => val!.isEmpty ? "Le mot de passe est requis" : null,
                     ),
                     SizedBox(height: 30),
-                    ElevatedButton(
-                      onPressed: register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[700],
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 4,
-                      ),
-                      child: Text(
-                        "Créer le compte",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                    isLoading
+                        ? CircularProgressIndicator()
+                        : ElevatedButton(
+                            onPressed: register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue[700],
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 4,
+                            ),
+                            child: Text(
+                              "Créer le compte",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
                   ],
                 ),
               ),

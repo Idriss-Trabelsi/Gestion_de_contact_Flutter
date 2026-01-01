@@ -1,6 +1,9 @@
+// lib/screens/home.dart
 import 'package:flutter/material.dart';
 import '../models/contact.dart';
-import '../services/contact_storage.dart';
+import '../services/api_service.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
 import '../widgets/contact_card.dart';
 import 'contact_details.dart';
 import 'create_edit_contact.dart';
@@ -22,12 +25,38 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadContacts() async {
     setState(() => isLoading = true);
-    contacts = await ContactHive.getAllContacts();
-    setState(() => isLoading = false);
+    
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final username = authService.currentUsername;
+    
+    if (username == null) {
+      // Rediriger vers la page de login si non connecté
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/login');
+      });
+      return;
+    }
+
+    try {
+      final contactsData = await ApiService.getAllContacts(username);
+      contacts = contactsData.map((json) => Contact.fromJson(json)).toList();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Erreur: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+    final username = authService.currentUsername ?? 'Utilisateur';
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -47,8 +76,37 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           IconButton(
+            icon: Icon(Icons.person),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text("Informations utilisateur"),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Utilisateur: $username"),
+                      SizedBox(height: 10),
+                      Text("Email: ${authService.currentUser?['email'] ?? 'Non disponible'}"),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text("Fermer"),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: Icon(Icons.logout),
-            onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+            onPressed: () {
+              authService.logout();
+              Navigator.pushReplacementNamed(context, '/login');
+            },
           ),
         ],
       ),
@@ -95,8 +153,13 @@ class _HomePageState extends State<HomePage> {
             "Ajoutez votre premier contact",
             style: TextStyle(fontSize: 16, color: Colors.grey[500]),
           ),
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _navigateToCreateContact,
+            child: Text("Ajouter un contact"),
+          ),
         ],
-      ), 
+      ),
     );
   }
 
@@ -109,9 +172,24 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _navigateToCreateContact() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final username = authService.currentUsername;
+    
+    if (username == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Vous devez être connecté pour ajouter un contact"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => CreateEditContactPage()),
+      MaterialPageRoute(
+        builder: (_) => CreateEditContactPage(username: username),
+      ),
     );
     _loadContacts();
   }

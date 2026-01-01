@@ -1,8 +1,10 @@
+// Alternative si l'erreur persiste
 import 'package:flutter/material.dart';
 import 'screens/login.dart';
 import 'screens/register.dart';
 import 'screens/home.dart';
-
+import 'package:provider/provider.dart';
+import 'services/auth_service.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -14,12 +16,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.light,
-        ),
-        appBarTheme: AppBarTheme(
+        useMaterial3: false, // Mettez à false si vous avez des problèmes
+        appBarTheme: const AppBarTheme(
           centerTitle: false,
           elevation: 0,
           iconTheme: IconThemeData(color: Colors.white),
@@ -38,7 +36,7 @@ class MyApp extends StatelessWidget {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 3,
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -61,7 +59,7 @@ class MyApp extends StatelessWidget {
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.red),
+            borderSide: const BorderSide(color: Colors.red),
           ),
         ),
         floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -71,18 +69,16 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      // Define named routes for easier navigation
       initialRoute: '/login',
       routes: {
         '/login': (context) => LoginPage(),
         '/register': (context) => RegisterPage(),
         '/': (context) => HomePage(),
       },
-      // Handle unknown routes
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
           builder: (context) => Scaffold(
-            appBar: AppBar(title: Text('Error')),
+            appBar: AppBar(title: const Text('Error')),
             body: Center(
               child: Text('Page not found: ${settings.name}'),
             ),
